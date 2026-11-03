@@ -4,7 +4,7 @@
 
 **Strip location, timestamps, device details and hidden images from iPhone photos — entirely in your browser.**
 
-[![Open the app](https://img.shields.io/badge/Open%20the%20app-1a1816?style=for-the-badge)](https://o2trap.github.io/metadata-remover/)
+[![Open the app](https://img.shields.io/badge/Open%20the%20app-1a1816?style=for-the-badge)](https://o2trap.github.io/METADATA-REMOVER/)
 [![Download](https://img.shields.io/badge/Download%20index.html-a2560f?style=for-the-badge)](https://github.com/o2trap/metadata-remover/raw/HEAD/index.html)
 
 ![No uploads](https://img.shields.io/badge/uploads-none-2ea44f)
