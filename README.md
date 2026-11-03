@@ -48,7 +48,7 @@ There is nothing to install. The tool is one HTML file.
 
 ### On iPhone
 
-1. Open **https://o2trap.github.io/metadata-remover/** in **Safari**.
+1. Open **https://o2trap.github.io/METADATA-REMOVER/** in **Safari**.
 2. Tap **Choose files** → **Photo Library**, and pick one or more photos.
 3. Review what each photo records.
 4. Tap **Remove metadata** on one photo, or **Clean and save** for all of them.
