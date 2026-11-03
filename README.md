@@ -37,7 +37,7 @@ Every photo an iPhone takes carries a record of where and when it was taken and 
 
 | Option | Link |
 |---|---|
-| **Use it online** | **https://o2trap.github.io/metadata-remover/** |
+| **Use it online** | **https://o2trap.github.io/METADATA-REMOVER/** |
 | Download the single file | [`index.html`](https://github.com/o2trap/metadata-remover/raw/HEAD/index.html) (right-click → *Save link as…*) |
 | Download the whole repo | [ZIP](https://github.com/o2trap/metadata-remover/archive/HEAD.zip) |
 | Clone | `git clone https://github.com/o2trap/metadata-remover.git` |
