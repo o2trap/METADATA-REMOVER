@@ -39,7 +39,7 @@ Every photo an iPhone takes carries a record of where and when it was taken and 
 |---|---|
 | **Use it online** | **https://o2trap.github.io/metadata-remover/** |
 | Download the single file | [`index.html`](https://github.com/o2trap/metadata-remover/raw/HEAD/index.html) (right-click → *Save link as…*) |
-| Download the whole repo | [ZIP](https://github.com/o2trap/metadata-remover/archive/refs/heads/HEAD.zip) |
+| Download the whole repo | [ZIP](https://github.com/o2trap/metadata-remover/archive/HEAD.zip) |
 | Clone | `git clone https://github.com/o2trap/metadata-remover.git` |
 
 There is nothing to install. The tool is one HTML file.
@@ -50,12 +50,9 @@ There is nothing to install. The tool is one HTML file.
 
 1. Open **https://o2trap.github.io/metadata-remover/** in **Safari**.
 2. Tap **Choose files** → **Photo Library**, and pick one or more photos.
-   - In the picker, tap **Options** and make sure **Location** is on and **All Photos Data** is selected, so you can see what's being removed. (The tool removes it either way.)
 3. Review what each photo records.
 4. Tap **Remove metadata** on one photo, or **Clean and save** for all of them.
 5. Press and hold the clean preview → **Save to Photos**, or save to Files.
-
-> **Tip:** Saving to Photos makes iOS add a new date to the copy, but not your location or camera details. To share with no added data at all, save to **Files** and share from there.
 
 ### On a computer
 
