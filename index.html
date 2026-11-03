@@ -1,0 +1,1187 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>iPhone Metadata Remover</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<style>
+/* Layout: one column, 1040 cap. Each frame is a split — the photograph with its
+   rebate rail on the left, the record it carries on the right. */
+:root{
+  --bg:#f6f5f3;
+  --card:#fffefc;
+  --raised:#eceae6;
+  --ink:#1a1816;
+  --ink-2:#56514b;
+  --ink-3:#7a736b;
+  --hair:rgba(26,24,22,.09);
+  --safelight:#a2560f;
+  --safelight-soft:rgba(162,86,15,.1);
+  --btn:#1a1816;
+  --btn-ink:#fffefc;
+  --font:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#141311;
+    --card:#1a1917;
+    --raised:#242220;
+    --ink:#eceae7;
+    --ink-2:#a39d95;
+    --ink-3:#857e76;
+    --hair:rgba(236,234,231,.09);
+    --safelight:#e0a166;
+    --safelight-soft:rgba(224,161,102,.12);
+    --btn:#eceae7;
+    --btn-ink:#141311;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141311;
+  --card:#1a1917;
+  --raised:#242220;
+  --ink:#eceae7;
+  --ink-2:#a39d95;
+  --ink-3:#857e76;
+  --hair:rgba(236,234,231,.09);
+  --safelight:#e0a166;
+  --safelight-soft:rgba(224,161,102,.12);
+  --btn:#eceae7;
+  --btn-ink:#141311;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:14px;
+  line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:48px 80px;
+  -webkit-font-smoothing:antialiased;
+}
+.page{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:32px}
+
+h1{font-size:32px;line-height:1.15;font-weight:400;letter-spacing:-.02em;margin:0 0 12px}
+.intro{display:flex;flex-direction:column;gap:8px}
+.intro p{margin:0;color:var(--ink-2);max-width:60ch}
+.intro .fineprint{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+
+svg.i{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* Bench: where frames come in */
+.bench{
+  background:var(--card);
+  border:1px solid var(--hair);
+  border-radius:16px;
+  padding:32px 24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  text-align:center;
+  transition:border-color 140ms var(--ease),background-color 140ms var(--ease);
+}
+.bench.hot{border-color:var(--safelight);background:var(--safelight-soft)}
+.bench svg.i{width:20px;height:20px;color:var(--ink-3)}
+.bench h2{margin:0;font-size:14px;font-weight:500}
+.bench p{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.bench .btn{margin-top:4px}
+
+button{font:inherit;cursor:pointer}
+.btn{
+  background:var(--btn);
+  color:var(--btn-ink);
+  border:1px solid transparent;
+  border-radius:8px;
+  height:36px;
+  padding:0 16px;
+  font-size:14px;
+  font-weight:500;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:opacity 140ms var(--ease),transform 140ms var(--ease);
+}
+.btn:hover{opacity:.88}
+.btn:active{transform:scale(.98)}
+.ghost{
+  background:transparent;
+  color:var(--ink-2);
+  border:1px solid var(--hair);
+  border-radius:8px;
+  height:32px;
+  padding:0 12px;
+  font-size:13px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  transition:color 140ms var(--ease),border-color 140ms var(--ease);
+}
+.ghost:hover{color:var(--ink);border-color:var(--ink-3)}
+.ghost:active{transform:scale(.98)}
+button:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--safelight);outline-offset:2px}
+
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.bar .count{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.bar-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.batch{margin:0;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.batch.ok{color:var(--safelight)}
+
+.frames{display:flex;flex-direction:column;gap:24px}
+
+.card{
+  background:var(--card);
+  border:1px solid var(--hair);
+  border-radius:16px;
+  overflow:hidden;
+  animation:rise 320ms var(--ease) both;
+}
+.card.example{opacity:.76}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+.split{display:grid;grid-template-columns:300px 1fr;gap:24px;padding:20px}
+
+/* The negative: sprocketed strip, the photograph, the rebate rail */
+.strip{background:var(--raised);border-radius:4px;padding:6px 0;display:flex;flex-direction:column;gap:6px}
+.perf{
+  height:6px;
+  margin:0 6px;
+  background:var(--bg);
+  -webkit-mask-image:repeating-linear-gradient(90deg,#000 0 8px,transparent 8px 16px);
+  mask-image:repeating-linear-gradient(90deg,#000 0 8px,transparent 8px 16px);
+}
+.shot{display:block;width:100%;height:auto;max-height:280px;object-fit:contain;background:var(--bg)}
+.shot.blank{aspect-ratio:3/2;background:var(--bg)}
+.rail{
+  display:flex;
+  gap:8px;
+  align-items:baseline;
+  margin-top:8px;
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--ink-3);
+  transition:color 140ms var(--ease);
+}
+.rail .fno{color:var(--ink-2);flex:none}
+.rail .rtext{min-width:0;overflow-wrap:anywhere}
+.card.cleaned .rail{color:var(--safelight)}
+.card.cleaned .strip{box-shadow:inset 0 0 0 1px var(--safelight)}
+
+.record{min-width:0;display:flex;flex-direction:column;gap:4px}
+.idline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.idline .name{overflow-wrap:anywhere}
+.tag{border:1px solid var(--hair);border-radius:4px;padding:0 6px;line-height:18px;color:var(--ink-3)}
+.device{font-size:22px;font-weight:400;line-height:1.2;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.lens{margin:0;color:var(--ink-2);font-size:13px}
+.facts{margin:12px 0 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));column-gap:24px}
+.fact{display:grid;grid-template-columns:104px 1fr;gap:12px;padding:8px 0;border-top:1px solid var(--hair);min-width:0}
+.fact dt{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.fact dd{margin:0;font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.place{margin-top:12px;display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);text-decoration-color:var(--hair);text-underline-offset:3px}
+.place:hover{text-decoration-color:currentColor}
+
+details{border-top:1px solid var(--hair)}
+summary{
+  padding:12px 20px;
+  font-size:13px;
+  color:var(--ink-2);
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  transition:color 140ms var(--ease);
+}
+summary:hover{color:var(--ink)}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"Show all";color:var(--ink-3);font-family:var(--mono);font-size:12px}
+details[open] summary::after{content:"Hide"}
+.tablewrap{overflow:auto;max-height:360px;border-top:1px solid var(--hair)}
+table{border-collapse:collapse;width:100%;font-size:12px;font-family:var(--mono)}
+th,td{text-align:left;padding:8px 20px;border-bottom:1px solid var(--hair);vertical-align:top}
+th{font-family:var(--font);font-size:12px;font-weight:400;color:var(--ink-3);position:sticky;top:0;background:var(--card)}
+td.k{color:var(--ink-3);white-space:nowrap}
+td.v{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--hair)}
+.status{padding:0 20px 16px;display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--ink-2)}
+.status .ok{color:var(--safelight)}
+.status ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:2px}
+.status li{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.saveout{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:4px}
+.saveout img{width:88px;height:88px;object-fit:cover;border-radius:4px;background:var(--raised)}
+.saveout p{margin:0;max-width:44ch}
+
+.credit{font-family:var(--mono);font-size:12px;color:var(--ink-3);margin:0}
+
+@media (max-width:760px){
+  body{padding-block:32px 48px}
+  h1{font-size:28px}
+  .split{grid-template-columns:1fr;gap:16px;padding:16px}
+  .facts{grid-template-columns:1fr}
+  .fact{grid-template-columns:96px 1fr}
+  summary,th,td,.actions{padding-left:16px;padding-right:16px}
+  .status{padding:0 16px 16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+
+<div class="page">
+  <header class="intro">
+    <h1>iPhone Metadata Remover</h1>
+    <p>An iPhone writes your location, the exact time, the phone model, lens, iOS version and a unique image ID into every photo. Drop your HEIC or JPEG photos here to see it all, then save a clean copy with none of it.</p>
+    <p class="fineprint">Read and rewritten in your browser. Nothing is uploaded. Removes EXIF, GPS, Apple MakerNote, XMP, IPTC, embedded HDR gain maps and depth maps, and the IMG_ file number.</p>
+  </header>
+
+  <div class="bench" id="bench">
+    <svg class="i" viewBox="0 0 24 24"><rect width="16" height="16" x="6" y="2" rx="2"/><path d="M18 22H4a2 2 0 0 1-2-2V6"/><circle cx="12" cy="8" r="1.6"/><path d="m22 13-1.3-1.3a2 2 0 0 0-2.8 0L14 16"/></svg>
+    <h2>Drop iPhone photos here</h2>
+    <p>HEIC · JPEG · PNG screenshots · WebP</p>
+    <button class="btn" id="pick">Choose files</button>
+    <input type="file" id="file" accept="image/*,.heic,.heif,.cr2,.cr3,.nef,.arw,.dng,.orf,.rw2,.raf" multiple hidden>
+  </div>
+
+  <div class="bar">
+    <span class="count" id="count">One example frame, until you drop your own</span>
+    <div class="bar-actions">
+      <button class="btn" id="cleanall" hidden>Clean and save</button>
+      <button class="ghost" id="clear" hidden>Clear</button>
+    </div>
+  </div>
+  <p class="batch" id="batch" hidden></p>
+
+  <div class="frames" id="frames"></div>
+
+  <p class="credit">Metadata parsed with exifr · HEIC decoded with heic2any</p>
+</div>
+
+<script>
+(function () {
+  var bench = document.getElementById('bench');
+  var input = document.getElementById('file');
+  var frames = document.getElementById('frames');
+  var countEl = document.getElementById('count');
+  var clearBtn = document.getElementById('clear');
+  var cleanAllBtn = document.getElementById('cleanall');
+  var batchEl = document.getElementById('batch');
+  var items = [];
+  var frameNo = 0;
+  var exampleCard = null;
+
+  var ICONS = {
+    eraser: '<path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l9.6-9.6a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
+    copy: '<rect width="13" height="13" x="9" y="9" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+    trash: '<path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>',
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'
+  };
+
+  function icon(name) {
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'i');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.innerHTML = ICONS[name];
+    return svg;
+  }
+
+  function labelled(cls, name, text) {
+    var b = document.createElement('button');
+    b.className = cls;
+    b.appendChild(icon(name));
+    b.appendChild(document.createTextNode(text));
+    return b;
+  }
+
+  document.getElementById('pick').addEventListener('click', function () { input.click(); });
+  input.addEventListener('change', function () { handle(input.files); input.value = ''; });
+
+  ['dragenter', 'dragover'].forEach(function (t) {
+    bench.addEventListener(t, function (e) { e.preventDefault(); bench.classList.add('hot'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    bench.addEventListener(t, function (e) { e.preventDefault(); bench.classList.remove('hot'); });
+  });
+  bench.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) handle(e.dataTransfer.files);
+  });
+  window.addEventListener('dragover', function (e) { e.preventDefault(); });
+  window.addEventListener('drop', function (e) { e.preventDefault(); });
+
+  clearBtn.addEventListener('click', function () {
+    frames.innerHTML = '';
+    items.length = 0;
+    frameNo = 0;
+    batchEl.hidden = true;
+    exampleCard = null;
+    showExample();
+    updateBar();
+  });
+
+  cleanAllBtn.addEventListener('click', cleanAll);
+
+  function updateBar() {
+    var n = items.length;
+    countEl.textContent = n
+      ? n + (n === 1 ? ' frame' : ' frames') + ' read'
+      : 'One example frame, until you drop your own';
+    clearBtn.hidden = n === 0;
+    cleanAllBtn.hidden = n === 0;
+    cleanAllBtn.textContent = n > 1 ? 'Clean ' + n + ' and save as zip' : 'Clean and save';
+  }
+
+  function handle(list) {
+    Array.prototype.forEach.call(list, read);
+  }
+
+  function read(file) {
+    if (exampleCard) { exampleCard.remove(); exampleCard = null; }
+
+    var card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = '<div class="split"><div class="record"><p class="idline"></p>' +
+      '<h2 class="device">Reading…</h2></div></div>';
+    card.querySelector('.idline').textContent = file.name;
+    frames.insertBefore(card, frames.firstChild);
+
+    var opts = { makerNote: true, userComment: true, tiff: true, exif: true, gps: true, ifd0: true, interop: true, iptc: true, xmp: true, icc: true, jfif: true, ihdr: true, mergeOutput: true, translateKeys: true, translateValues: true, reviveValues: true, sanitize: true };
+
+    Promise.resolve()
+      .then(function () { return exifr.parse(file, opts); })
+      .catch(function () { return null; })
+      .then(function (tags) { render(card, file, tags || {}); });
+  }
+
+  /* ---- formatting ----------------------------------------------------- */
+
+  function num(v, digits) {
+    if (typeof v !== 'number' || !isFinite(v)) return null;
+    var r = digits == null ? v : Math.round(v * Math.pow(10, digits)) / Math.pow(10, digits);
+    return String(r);
+  }
+
+  function shutter(t) {
+    if (typeof t !== 'number' || !isFinite(t) || t <= 0) return null;
+    if (t >= 1) return num(t, 1) + 's';
+    return '1/' + Math.round(1 / t) + 's';
+  }
+
+  function joinMakeModel(make, model) {
+    make = (make || '').trim();
+    model = (model || '').trim();
+    if (!make && !model) return null;
+    if (!make) return model;
+    if (!model) return make;
+    var firstWord = make.split(/\s+/)[0];
+    if (model.toLowerCase().indexOf(firstWord.toLowerCase()) === 0) return model;
+    return make + ' ' + model;
+  }
+
+  function fmtDate(d) {
+    if (!(d instanceof Date) || isNaN(d.getTime())) return null;
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+      ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function fmtValue(v) {
+    if (v == null) return '';
+    if (v instanceof Date) return fmtDate(v) || String(v);
+    if (Array.isArray(v)) {
+      if (v.length > 24) return '[' + v.length + ' values]';
+      return v.map(fmtValue).join(', ');
+    }
+    if (v instanceof Uint8Array || v instanceof Uint16Array) return '[' + v.length + ' bytes]';
+    if (typeof v === 'object') {
+      try { return JSON.stringify(v).slice(0, 300); } catch (e) { return '[object]'; }
+    }
+    if (typeof v === 'number') return num(v, 6);
+    return String(v);
+  }
+
+  function fmtSize(n) {
+    if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+    if (n >= 1024) return Math.round(n / 1024) + ' kB';
+    return n + ' bytes';
+  }
+
+  function frameLabel() {
+    return 'F-' + (++frameNo < 10 ? '0' : '') + frameNo;
+  }
+
+  /* ---- the frame ------------------------------------------------------ */
+
+  function buildStrip(src, railText, fno) {
+    var left = document.createElement('div');
+
+    var strip = document.createElement('div');
+    strip.className = 'strip';
+    strip.appendChild(perf());
+    var shot;
+    if (src) {
+      shot = document.createElement('img');
+      shot.className = 'shot';
+      shot.alt = '';
+      shot.src = src;
+    } else {
+      shot = document.createElement('div');
+      shot.className = 'shot blank';
+    }
+    strip.appendChild(shot);
+    strip.appendChild(perf());
+    left.appendChild(strip);
+
+    var rail = document.createElement('div');
+    rail.className = 'rail';
+    var f = document.createElement('span');
+    f.className = 'fno';
+    f.textContent = fno;
+    var t = document.createElement('span');
+    t.className = 'rtext';
+    t.textContent = railText;
+    rail.appendChild(f);
+    rail.appendChild(t);
+    left.appendChild(rail);
+
+    return { el: left, shot: shot, railText: t };
+  }
+
+  function perf() {
+    var p = document.createElement('div');
+    p.className = 'perf';
+    return p;
+  }
+
+  function factList(pairs) {
+    var dl = document.createElement('dl');
+    dl.className = 'facts';
+    pairs.forEach(function (pair) {
+      var row = document.createElement('div');
+      row.className = 'fact';
+      var dt = document.createElement('dt');
+      dt.textContent = pair[0];
+      var dd = document.createElement('dd');
+      dd.textContent = pair[1];
+      row.appendChild(dt);
+      row.appendChild(dd);
+      dl.appendChild(row);
+    });
+    return dl;
+  }
+
+  function render(card, file, t) {
+    var device = joinMakeModel(t.Make, t.Model);
+    var lens = t.LensModel || t.LensMake || (t.LensInfo ? fmtValue(t.LensInfo) : null);
+
+    var exposure = [];
+    var fn = num(t.FNumber, 1);
+    if (fn) exposure.push('ƒ/' + fn);
+    var sh = shutter(t.ExposureTime);
+    if (sh) exposure.push(sh);
+    var iso = t.ISO != null ? t.ISO : t.ISOSpeedRatings;
+    if (iso != null) exposure.push('ISO ' + fmtValue(iso));
+    var fl = num(t.FocalLength, 1);
+    if (fl) exposure.push(fl + 'mm');
+    if (t.FocalLengthIn35mmFormat) exposure.push(t.FocalLengthIn35mmFormat + 'mm eq');
+
+    var w = t.ExifImageWidth || t.ImageWidth || t.PixelXDimension;
+    var h = t.ExifImageHeight || t.ImageHeight || t.PixelYDimension;
+
+    var facts = [];
+    var push = function (label, value) {
+      if (value === null || value === undefined || value === '') return;
+      facts.push([label, value]);
+    };
+    push('Taken', fmtDate(t.DateTimeOriginal) || fmtDate(t.CreateDate) || fmtDate(t.DateTimeDigitized));
+    push('Modified', fmtDate(t.ModifyDate) || fmtDate(new Date(file.lastModified)));
+    push('Size', (w && h ? w + ' × ' + h + ' px, ' : '') + fmtSize(file.size));
+    push('Format', file.type || '—');
+    push('Orientation', t.Orientation != null ? fmtValue(t.Orientation) : null);
+    push('Flash', t.Flash != null ? fmtValue(t.Flash) : null);
+    push('White balance', t.WhiteBalance != null ? fmtValue(t.WhiteBalance) : null);
+    push('Metering', t.MeteringMode != null ? fmtValue(t.MeteringMode) : null);
+    push('Program', t.ExposureProgram != null ? fmtValue(t.ExposureProgram) : null);
+    push('Software', t.Software || t.CreatorTool || null);
+    push('Author', t.Artist || t.Creator || null);
+    push('Copyright', t.Copyright || t.Rights || null);
+
+    var lat = typeof t.latitude === 'number' ? t.latitude : null;
+    var lon = typeof t.longitude === 'number' ? t.longitude : null;
+    if (lat != null && lon != null) {
+      push('Position', num(lat, 5) + ', ' + num(lon, 5));
+      if (t.GPSAltitude != null) push('Altitude', num(t.GPSAltitude, 0) + ' m');
+    }
+
+    var keys = Object.keys(t).sort();
+    var url = URL.createObjectURL(file);
+    var railText = [device].concat(exposure).filter(Boolean).join(' · ') || 'No camera data recorded';
+    var strip = buildStrip(url, railText, frameLabel());
+    strip.shot.addEventListener('error', function () {
+      strip.shot.replaceWith(Object.assign(document.createElement('div'), { className: 'shot blank' }));
+      URL.revokeObjectURL(url);
+    });
+
+    var split = document.createElement('div');
+    split.className = 'split';
+    split.appendChild(strip.el);
+
+    var record = document.createElement('div');
+    record.className = 'record';
+
+    var idline = document.createElement('p');
+    idline.className = 'idline';
+    var nm = document.createElement('span');
+    nm.className = 'name';
+    nm.textContent = file.name;
+    idline.appendChild(nm);
+    record.appendChild(idline);
+
+    var dev = document.createElement('h2');
+    dev.className = 'device';
+    dev.textContent = device || (keys.length ? 'Camera not recorded' : 'Nothing recorded');
+    record.appendChild(dev);
+
+    if (lens) {
+      var ln = document.createElement('p');
+      ln.className = 'lens';
+      ln.textContent = lens;
+      record.appendChild(ln);
+    }
+
+    if (facts.length) record.appendChild(factList(facts));
+
+    if (lat != null && lon != null) {
+      var a = document.createElement('a');
+      a.className = 'place';
+      a.href = 'https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '#map=15/' + lat + '/' + lon;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.appendChild(icon('pin'));
+      a.appendChild(document.createTextNode('Where this was taken'));
+      record.appendChild(a);
+    }
+
+    if (!keys.length) {
+      var e = document.createElement('p');
+      e.className = 'lens';
+      e.style.marginTop = '12px';
+      e.textContent = 'No EXIF, XMP or IPTC data in this file. Screenshots and anything downloaded from a social platform usually arrive stripped.';
+      record.appendChild(e);
+    }
+
+    split.appendChild(record);
+    card.innerHTML = '';
+    card.appendChild(split);
+
+    if (keys.length) {
+      var det = document.createElement('details');
+      var sum = document.createElement('summary');
+      sum.textContent = keys.length + ' tags in full';
+      det.appendChild(sum);
+      var tw = document.createElement('div');
+      tw.className = 'tablewrap';
+      var table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>Tag</th><th>Value</th></tr></thead>';
+      var tb = document.createElement('tbody');
+      keys.forEach(function (k) {
+        var tr = document.createElement('tr');
+        var tdk = document.createElement('td');
+        tdk.className = 'k';
+        tdk.textContent = k;
+        var tdv = document.createElement('td');
+        tdv.className = 'v';
+        tdv.textContent = fmtValue(t[k]);
+        tr.appendChild(tdk);
+        tr.appendChild(tdv);
+        tb.appendChild(tr);
+      });
+      table.appendChild(tb);
+      tw.appendChild(table);
+      det.appendChild(tw);
+      card.appendChild(det);
+    }
+
+    var actions = document.createElement('div');
+    actions.className = 'actions';
+
+    var status = document.createElement('div');
+    status.className = 'status';
+    status.hidden = true;
+
+    card.appendChild(actions);
+    card.appendChild(status);
+
+    var entry = { file: file, tags: t, card: card, rail: strip.railText, status: status };
+
+    var clean = labelled('btn', 'eraser', 'Remove metadata');
+    clean.addEventListener('click', function () { cleanAndOffer(entry, clean); });
+    actions.appendChild(clean);
+    entry.btn = clean;
+
+    var copy = labelled('ghost', 'copy', 'Copy tags');
+    copy.addEventListener('click', function () {
+      var plain = {};
+      keys.forEach(function (k) { plain[k] = fmtValue(t[k]); });
+      var text = JSON.stringify({ file: file.name, tags: plain }, null, 2);
+      var done = function () {
+        copy.lastChild.textContent = 'Copied';
+        setTimeout(function () { copy.lastChild.textContent = 'Copy tags'; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { copyFailed(copy); });
+      } else {
+        copyFailed(copy);
+      }
+    });
+    actions.appendChild(copy);
+
+    var remove = labelled('ghost', 'trash', 'Remove');
+    remove.addEventListener('click', function () {
+      URL.revokeObjectURL(url);
+      card.remove();
+      var at = items.indexOf(entry);
+      if (at !== -1) items.splice(at, 1);
+      if (!items.length) { frameNo = 0; showExample(); }
+      updateBar();
+    });
+    actions.appendChild(remove);
+
+    items.push(entry);
+    updateBar();
+  }
+
+  function copyFailed(btn) {
+    btn.lastChild.textContent = 'Copy blocked, select the table';
+    setTimeout(function () { btn.lastChild.textContent = 'Copy tags'; }, 2600);
+  }
+
+  /* ---- the example frame, shown until a real one arrives --------------- */
+
+  function showExample() {
+    var card = document.createElement('article');
+    card.className = 'card example';
+
+    var split = document.createElement('div');
+    split.className = 'split';
+    split.appendChild(buildStrip(null, 'Apple iPhone 15 Pro · ƒ/1.8 · 1/120s · ISO 64 · 24mm', 'F-00').el);
+
+    var record = document.createElement('div');
+    record.className = 'record';
+
+    var idline = document.createElement('p');
+    idline.className = 'idline';
+    var nm = document.createElement('span');
+    nm.className = 'name';
+    nm.textContent = 'IMG_4417.heic';
+    var tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = 'Example';
+    idline.appendChild(nm);
+    idline.appendChild(tag);
+    record.appendChild(idline);
+
+    var dev = document.createElement('h2');
+    dev.className = 'device';
+    dev.textContent = 'Apple iPhone 15 Pro';
+    record.appendChild(dev);
+
+    var lens = document.createElement('p');
+    lens.className = 'lens';
+    lens.textContent = 'iPhone 15 Pro back triple camera 6.765mm f/1.78';
+    record.appendChild(lens);
+
+    record.appendChild(factList([
+      ['Taken', '2026-10-12 17:41'],
+      ['Modified', '2026-10-12 17:41'],
+      ['Size', '4032 × 3024 px, 2.4 MB'],
+      ['Format', 'image/heic'],
+      ['Orientation', 'Horizontal (normal)'],
+      ['Software', 'iOS 18.1'],
+      ['Position', '51.50732, -0.12765'],
+      ['Altitude', '14 m']
+    ]));
+
+    var note = document.createElement('p');
+    note.className = 'lens';
+    note.style.marginTop = '12px';
+    note.textContent = 'A phone writes all of this into every picture it takes, including where you stood.';
+    record.appendChild(note);
+
+    split.appendChild(record);
+    card.appendChild(split);
+    frames.appendChild(card);
+    exampleCard = card;
+  }
+
+  /* ---- metadata removal ------------------------------------------------ */
+
+  var BENIGN = {};
+  ('ImageWidth ImageHeight BitDepth ColorType Compression Filter Interlace ColorComponents BitsPerSample ' +
+   'ProfileDescription ColorSpaceData DeviceModel DeviceManufacturer ProfileVersion ProfileClass ProfileCreator ' +
+   'ProfileConnectionSpace RenderingIntent ProfileDateTime ProfileFileSignature PrimaryPlatform ProfileID ' +
+   'CMMType ProfileCopyright ConnectionSpaceIlluminant Technology DeviceAttributes ProfileFlags ' +
+   'ColorSpace Precision Channels SubSampling Gamma Chromaticity sRGBRendering PixelsPerUnitX PixelsPerUnitY PixelUnits')
+    .split(' ').forEach(function (k) { BENIGN[k] = 1; });
+
+  var VERIFY_OPTS = { tiff: true, exif: true, gps: true, ifd0: true, iptc: true, xmp: true, icc: true, mergeOutput: true };
+
+  var downloadsPromise = (window.claude && window.claude.use)
+    ? Promise.resolve(window.claude.use('downloads')).catch(function () { return null; })
+    : Promise.resolve(null);
+
+  function ident(b, start, max) {
+    var s = '';
+    for (var i = start; i < start + max && i < b.length; i++) {
+      if (b[i] === 0) break;
+      s += String.fromCharCode(b[i]);
+    }
+    return s;
+  }
+
+  // Segments worth keeping: they describe how to render the pixels and name nobody.
+  function keepJpegSegment(marker, b, dataStart) {
+    if (marker === 0xE0) return /^JF(IF|XX)/.test(ident(b, dataStart, 5));
+    if (marker === 0xE2) return ident(b, dataStart, 11) === 'ICC_PROFILE';
+    if (marker === 0xEE) return ident(b, dataStart, 5) === 'Adobe';
+    return marker < 0xE0 || marker > 0xEF;
+  }
+
+  function jpegSegmentName(marker, b, dataStart) {
+    var id = ident(b, dataStart, 12).replace(/[^\x20-\x7e]/g, '');
+    if (marker === 0xFE) return 'comment';
+    if (marker === 0xE1) return /^http/.test(id) ? 'APP1 XMP' : 'APP1 Exif';
+    if (marker === 0xED) return 'APP13 IPTC/Photoshop';
+    if (marker === 0xE2) return 'APP2 ' + (id || 'data');
+    return 'APP' + (marker - 0xE0) + (id ? ' ' + id : '');
+  }
+
+  function stripJpeg(buf) {
+    var b = new Uint8Array(buf), d = new DataView(buf);
+    if (b.length < 4 || d.getUint16(0) !== 0xFFD8) return null;
+    var parts = [b.subarray(0, 2)], removed = [], i = 2;
+    while (i < b.length - 1) {
+      if (b[i] !== 0xFF) return null;
+      var marker = b[i + 1];
+      if (marker === 0xFF) { i++; continue; }
+      if (marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) {
+        parts.push(b.subarray(i, i + 2));
+        i += 2;
+        continue;
+      }
+      if (marker === 0xD9) { parts.push(b.subarray(i, i + 2)); break; }
+      if (marker === 0xDA) {
+        // Copy scan data up to the first real EOI. iPhones append extra JPEGs
+        // after it (HDR gain map, depth, portrait matte), each with its own EXIF.
+        var j = i + 2;
+        while (j < b.length - 1) {
+          if (b[j] === 0xFF && b[j + 1] === 0xD9) break;
+          j++;
+        }
+        if (j >= b.length - 1) { parts.push(b.subarray(i)); break; }
+        parts.push(b.subarray(i, j + 2));
+        if (j + 2 < b.length) removed.push('appended images after end of picture (' + fmtSize(b.length - j - 2) + ')');
+        break;
+      }
+      if (i + 4 > b.length) return null;
+      var len = d.getUint16(i + 2);
+      var end = i + 2 + len;
+      if (len < 2 || end > b.length) return null;
+      var isMeta = (marker >= 0xE0 && marker <= 0xEF) || marker === 0xFE;
+      if (isMeta && !keepJpegSegment(marker, b, i + 4)) {
+        removed.push(jpegSegmentName(marker, b, i + 4));
+      } else {
+        parts.push(b.subarray(i, end));
+      }
+      i = end;
+    }
+    return { parts: parts, removed: removed, type: 'image/jpeg' };
+  }
+
+  var PNG_KEEP = { IHDR: 1, PLTE: 1, IDAT: 1, IEND: 1, tRNS: 1, gAMA: 1, cHRM: 1, sRGB: 1, iCCP: 1, bKGD: 1, pHYs: 1, sBIT: 1, hIST: 1, sPLT: 1, acTL: 1, fcTL: 1, fdAT: 1 };
+
+  function stripPng(buf) {
+    var b = new Uint8Array(buf), d = new DataView(buf);
+    var sig = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (b.length < 12) return null;
+    for (var k = 0; k < 8; k++) if (b[k] !== sig[k]) return null;
+    var parts = [b.subarray(0, 8)], removed = [], i = 8;
+    while (i + 12 <= b.length) {
+      var len = d.getUint32(i);
+      var type = String.fromCharCode(b[i + 4], b[i + 5], b[i + 6], b[i + 7]);
+      var end = i + 12 + len;
+      if (end > b.length) return null;
+      if (PNG_KEEP[type]) parts.push(b.subarray(i, end));
+      else removed.push(type + ' chunk');
+      i = end;
+      if (type === 'IEND') break;
+    }
+    return { parts: parts, removed: removed, type: 'image/png' };
+  }
+
+  function rotated(o) {
+    if (o == null) return false;
+    if (typeof o === 'number') return o !== 1;
+    return !/horizontal\s*\(normal\)/i.test(String(o));
+  }
+
+  function isHeic(file) {
+    return /hei[cf]/i.test(file.type || '') || /\.hei[cf]$/i.test(file.name || '');
+  }
+
+  function decodeHeic(file) {
+    if (!window.heic2any) return Promise.reject(new Error('heic'));
+    return heic2any({ blob: file, toType: 'image/png' }).then(function (out) {
+      var blob = Array.isArray(out) ? out[0] : out;
+      return decodeViaImg(blob);
+    });
+  }
+
+  function decode(file) {
+    var first = window.createImageBitmap
+      ? createImageBitmap(file, { imageOrientation: 'from-image' }).catch(function () { return decodeViaImg(file); })
+      : decodeViaImg(file);
+    // Safari decodes HEIC natively; other browsers fall back to heic2any.
+    return first.catch(function (err) {
+      if (isHeic(file)) return decodeHeic(file);
+      throw err;
+    });
+  }
+
+  function decodeViaImg(file) {
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file);
+      var im = new Image();
+      im.onload = function () { URL.revokeObjectURL(url); res(im); };
+      im.onerror = function () { URL.revokeObjectURL(url); rej(new Error('decode')); };
+      im.src = url;
+    });
+  }
+
+  function reencode(file, mime) {
+    return decode(file).then(function (src) {
+      var w = src.width || src.naturalWidth;
+      var h = src.height || src.naturalHeight;
+      var c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      var ctx = c.getContext('2d');
+      if (mime === 'image/jpeg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, w, h); }
+      ctx.drawImage(src, 0, 0, w, h);
+      if (src.close) src.close();
+      return new Promise(function (res, rej) {
+        c.toBlob(function (bl) {
+          if (bl) res({ blob: bl, type: mime, reencoded: true });
+          else rej(new Error('encode'));
+        }, mime, 0.95);
+      });
+    });
+  }
+
+  function cleanName(name, type) {
+    var ext = type === 'image/png' ? '.png' : type === 'image/webp' ? '.webp' : '.jpg';
+    // Drop the IMG_1234 counter: it reveals how many photos the phone has taken.
+    var rnd = '';
+    var a = new Uint8Array(4);
+    (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.random() * 256; });
+    a.forEach(function (x) { rnd += (x < 16 ? '0' : '') + x.toString(16); });
+    return 'photo-' + rnd + ext;
+  }
+
+  function buildClean(file, t) {
+    var mime = (file.type || '').toLowerCase();
+    var isJpeg = /jpe?g/.test(mime) || /\.jpe?g$/i.test(file.name);
+    var isPng = mime === 'image/png' || /\.png$/i.test(file.name);
+    var isWebp = mime === 'image/webp' || /\.webp$/i.test(file.name);
+    var lossless = (isJpeg && !rotated(t.Orientation)) || isPng;
+
+    if (lossless) {
+      return file.arrayBuffer().then(function (buf) {
+        var out = isPng ? stripPng(buf) : stripJpeg(buf);
+        if (out) {
+          return {
+            blob: new Blob(out.parts, { type: out.type }),
+            type: out.type,
+            removed: out.removed,
+            reencoded: false
+          };
+        }
+        return reencode(file, isPng ? 'image/png' : 'image/jpeg');
+      });
+    }
+    var target = isPng ? 'image/png' : isWebp ? 'image/webp' : 'image/jpeg';
+    return reencode(file, target).catch(function () { return reencode(file, 'image/jpeg'); });
+  }
+
+  function line(text, cls) {
+    var p = document.createElement('p');
+    p.style.margin = '0';
+    if (cls) p.className = cls;
+    p.textContent = text;
+    return p;
+  }
+
+  // Rebuild one file without its metadata and report what went, on its own card.
+  function cleanOne(entry) {
+    var file = entry.file, t = entry.tags, status = entry.status;
+    status.hidden = false;
+    status.innerHTML = '';
+    status.appendChild(line('Rebuilding the file without its metadata'));
+
+    return buildClean(file, t)
+      .then(function (out) {
+        return exifr.parse(out.blob, VERIFY_OPTS)
+          .catch(function () { return null; })
+          .then(function (left) {
+            var names = left ? Object.keys(left) : [];
+            // A colour profile is kept on purpose; it identifies nobody.
+            var identifying = names.filter(function (k) { return !BENIGN[k]; });
+            status.innerHTML = '';
+
+            status.appendChild(line(out.reencoded
+              ? 'Re-encoded the pixels into a fresh file, so every EXIF, XMP and IPTC tag is gone'
+              : 'Rewrote the file without its metadata blocks, pixels untouched'));
+
+            if (out.reencoded && rotated(t.Orientation)) {
+              status.appendChild(line('The original leaned on an EXIF orientation flag, so the rotation went into the pixels before the flag was dropped'));
+            }
+            if (out.removed && out.removed.length) {
+              var ul = document.createElement('ul');
+              out.removed.slice(0, 12).forEach(function (n) {
+                var li = document.createElement('li');
+                li.textContent = n;
+                ul.appendChild(li);
+              });
+              status.appendChild(ul);
+            }
+
+            if (identifying.length) {
+              status.appendChild(line('Checked again: ' + identifying.length + ' tag(s) still there (' + identifying.slice(0, 5).join(', ') + ')'));
+            } else {
+              status.appendChild(line('Checked again: no camera, location, timestamp or author data left', 'ok'));
+              entry.card.classList.add('cleaned');
+              entry.rail.textContent = 'Cleaned · nothing left to identify the camera or the place';
+            }
+
+            return { blob: out.blob, name: cleanName(file.name, out.type), status: status };
+          });
+      })
+      .catch(function () {
+        status.innerHTML = '';
+        status.appendChild(line('This file could not be rebuilt in the browser. For HEIC, try Safari, or on the iPhone set Settings > Camera > Formats > Most Compatible to shoot JPEG'));
+        return null;
+      });
+  }
+
+  // Hand a finished blob to the viewer. Resolves true when it was saved.
+  function saveBlob(blob, name, status) {
+    return downloadsPromise.then(function (downloads) {
+      if (!downloads) {
+        offerManually(status, blob, name);
+        return false;
+      }
+      return downloads.save({ filename: name, data: blob }).then(function () {
+        status.appendChild(line('Saved as ' + name, 'ok'));
+        return true;
+      }, function (err) {
+        var code = err && err.code;
+        status.appendChild(code === 'declined'
+          ? line('Save cancelled, the clean copy is still here')
+          : line('This view cannot save files (' + (code || 'unavailable') + ')'));
+        offerManually(status, blob, name);
+        return false;
+      });
+    });
+  }
+
+  function cleanAndOffer(entry, btn) {
+    btn.disabled = true;
+    btn.lastChild.textContent = 'Removing';
+    return cleanOne(entry).then(function (r) {
+      if (!r) return;
+      btn.lastChild.textContent = 'Saving';
+      return saveBlob(r.blob, r.name, entry.status);
+    }).then(function () {
+      btn.disabled = false;
+      btn.lastChild.textContent = 'Remove metadata';
+    });
+  }
+
+  function offerManually(status, blob, name) {
+    var wrap = document.createElement('div');
+    wrap.className = 'saveout';
+    var img = document.createElement('img');
+    img.alt = 'Clean copy of ' + name;
+    img.src = URL.createObjectURL(blob);
+    wrap.appendChild(img);
+    wrap.appendChild(line('Clean copy, ' + fmtSize(blob.size) + '. Right-click or press and hold to save it as ' + name));
+    status.appendChild(wrap);
+  }
+
+  /* ---- batch: clean every frame, save one zip -------------------------- */
+
+  function uniqueNames(list) {
+    var seen = {};
+    list.forEach(function (r) {
+      var name = r.name, n = 1;
+      while (seen[name.toLowerCase()]) {
+        name = r.name.replace(/(\.[^.]+)$/, ' (' + (++n) + ')$1');
+      }
+      seen[name.toLowerCase()] = 1;
+      r.zipName = name;
+    });
+  }
+
+  function cleanAll() {
+    var list = items.slice();
+    if (!list.length) return;
+    cleanAllBtn.disabled = true;
+    batchEl.hidden = false;
+    batchEl.className = 'batch';
+
+    var ready = [];
+    var seq = Promise.resolve();
+    list.forEach(function (it, i) {
+      seq = seq.then(function () {
+        batchEl.textContent = 'Cleaning ' + (i + 1) + ' of ' + list.length + ', ' + it.file.name;
+        it.btn.disabled = true;
+        return cleanOne(it).then(function (r) {
+          it.btn.disabled = false;
+          if (r) ready.push(r);
+        });
+      });
+    });
+
+    return seq.then(function () {
+      var failed = list.length - ready.length;
+      if (!ready.length) {
+        batchEl.textContent = 'None of these files could be rebuilt in the browser';
+        cleanAllBtn.disabled = false;
+        return;
+      }
+      if (ready.length === 1) {
+        batchEl.textContent = 'Saving ' + ready[0].name;
+        return saveBlob(ready[0].blob, ready[0].name, ready[0].status).then(function (saved) {
+          batchEl.textContent = saved ? 'Saved ' + ready[0].name : 'Clean copy is ready on the frame below';
+          batchEl.className = saved ? 'batch ok' : 'batch';
+          cleanAllBtn.disabled = false;
+        });
+      }
+
+      batchEl.textContent = 'Packing ' + ready.length + ' clean frames into a zip';
+      uniqueNames(ready);
+      return Promise.all(ready.map(function (r) {
+        return r.blob.arrayBuffer().then(function (buf) {
+          return { name: r.zipName, bytes: new Uint8Array(buf) };
+        });
+      })).then(function (entries) {
+        var zip = makeZip(entries);
+        return downloadsPromise.then(function (downloads) {
+          if (!downloads) {
+            batchEl.textContent = 'This view cannot save files, so each clean copy sits on its own frame below';
+            ready.forEach(function (r) { offerManually(r.status, r.blob, r.name); });
+            cleanAllBtn.disabled = false;
+            return;
+          }
+          return downloads.save({ filename: 'clean-photos.zip', data: zip }).then(function () {
+            batchEl.className = 'batch ok';
+            batchEl.textContent = 'Saved clean-photos.zip, ' + ready.length + ' images, ' + fmtSize(zip.size) +
+              (failed ? ', ' + failed + ' could not be rebuilt' : '');
+            cleanAllBtn.disabled = false;
+          }, function (err) {
+            var code = err && err.code;
+            batchEl.textContent = code === 'declined'
+              ? 'Save cancelled, press the button again to rebuild the zip'
+              : 'The zip could not be saved (' + (code || 'unavailable') + '), each clean copy sits on its frame below';
+            if (code !== 'declined') ready.forEach(function (r) { offerManually(r.status, r.blob, r.name); });
+            cleanAllBtn.disabled = false;
+          });
+        });
+      });
+    });
+  }
+
+  var CRC_TABLE = (function () {
+    var t = new Uint32Array(256);
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(u8) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  // Store-only zip: JPEG and PNG are already compressed, so deflate would buy nothing.
+  function makeZip(entries) {
+    var enc = new TextEncoder();
+    var now = new Date();
+    var time = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF;
+    var date = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+    var parts = [], central = [], offset = 0, centralSize = 0;
+
+    entries.forEach(function (e) {
+      var nameBytes = enc.encode(e.name);
+      var size = e.bytes.length;
+      var crc = crc32(e.bytes);
+
+      var lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0, 0x04034b50, true);
+      lh.setUint16(4, 20, true);
+      lh.setUint16(6, 0x0800, true);
+      lh.setUint16(8, 0, true);
+      lh.setUint16(10, time, true);
+      lh.setUint16(12, date, true);
+      lh.setUint32(14, crc, true);
+      lh.setUint32(18, size, true);
+      lh.setUint32(22, size, true);
+      lh.setUint16(26, nameBytes.length, true);
+      lh.setUint16(28, 0, true);
+      parts.push(new Uint8Array(lh.buffer), nameBytes, e.bytes);
+
+      var cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 0x02014b50, true);
+      cd.setUint16(4, 20, true);
+      cd.setUint16(6, 20, true);
+      cd.setUint16(8, 0x0800, true);
+      cd.setUint16(10, 0, true);
+      cd.setUint16(12, time, true);
+      cd.setUint16(14, date, true);
+      cd.setUint32(16, crc, true);
+      cd.setUint32(20, size, true);
+      cd.setUint32(24, size, true);
+      cd.setUint16(28, nameBytes.length, true);
+      cd.setUint32(42, offset, true);
+      central.push(new Uint8Array(cd.buffer), nameBytes);
+      centralSize += 46 + nameBytes.length;
+      offset += 30 + nameBytes.length + size;
+    });
+
+    var eocd = new DataView(new ArrayBuffer(22));
+    eocd.setUint32(0, 0x06054b50, true);
+    eocd.setUint16(8, entries.length, true);
+    eocd.setUint16(10, entries.length, true);
+    eocd.setUint32(12, centralSize, true);
+    eocd.setUint32(16, offset, true);
+    return new Blob(parts.concat(central, [new Uint8Array(eocd.buffer)]), { type: 'application/zip' });
+  }
+
+  showExample();
+  updateBar();
+})();
+</script>
+
+</body></html>
